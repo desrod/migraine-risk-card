@@ -2,7 +2,7 @@
 
 A science-backed environmental migraine risk monitoring card for Home Assistant. Tracks 9 weather and air quality factors known to trigger migraines and displays a composite risk score with a visual gauge.
 
-![Migraine Risk Card](docs/card-preview.png)
+![Migraine Risk Card](https://raw.githubusercontent.com/GreenNovaEmma/migraine-risk-card/main/docs/card-preview.png)
 
 ## Why I Built This
 
