@@ -33,7 +33,7 @@ const FACTORS = {
     maxPts: 4,
     configKey: 'entity_pressure_6h',
     label: 'Pressure Change (6h)',
-    thresholds: [[4,1],[6,2],[10,3],[14,4]],
+    thresholds: [[4,1],[6,2],[8,3],[10,4]],
   },
   pressure_24h: {
     name: 'Pressure 24h',
@@ -42,7 +42,7 @@ const FACTORS = {
     maxPts: 3,
     configKey: 'entity_pressure_24h',
     label: 'Pressure Change (24h)',
-    thresholds: [[3,1],[6,2],[10,3]],
+    thresholds: [[6,1],[10,2],[14,3]],
   },
   humidity: {
     name: 'Humidity',
@@ -51,7 +51,7 @@ const FACTORS = {
     maxPts: 2,
     configKey: 'entity_humidity',
     label: 'Humidity',
-    thresholds: [[70,1],[80,2]],
+    scoreFn: v => v > 80 ? 2 : v < 30 ? 1 : 0,
   },
   temperature: {
     name: 'Temperature',
@@ -60,7 +60,7 @@ const FACTORS = {
     maxPts: 2,
     configKey: 'entity_temperature',
     label: 'Current Temperature',
-    scoreFn: v => (v < 5 || v > 35) ? 2 : (v < 10 || v > 30) ? 1 : 0,
+    scoreFn: v => (v > 30 || v < 5) ? 2 : 0,
   },
   temperature_change: {
     name: 'Temp Change',
@@ -69,7 +69,7 @@ const FACTORS = {
     maxPts: 2,
     configKey: 'entity_temperature_change',
     label: 'Temperature Change (6h)',
-    thresholds: [[3,1],[6,2]],
+    thresholds: [[5,1],[8,2]],
   },
   wind: {
     name: 'Wind',
@@ -78,7 +78,7 @@ const FACTORS = {
     maxPts: 2,
     configKey: 'entity_wind_speed',
     label: 'Wind Speed',
-    thresholds: [[30,1],[50,2]],
+    thresholds: [[35,1],[50,2]],
   },
   uv: {
     name: 'UV',
@@ -87,7 +87,7 @@ const FACTORS = {
     maxPts: 2,
     configKey: 'entity_uv_index',
     label: 'UV Index',
-    thresholds: [[5,1],[8,2]],
+    thresholds: [[6,1],[8,2]],
   },
   thunderstorm: {
     name: 'Storm',
@@ -105,7 +105,7 @@ const FACTORS = {
     maxPts: 3,
     configKey: 'entity_air_quality',
     label: 'Air Quality (AQI)',
-    thresholds: [[50,1],[100,2],[150,3]],
+    scoreFn: v => v <= 50 ? 0 : v <= 100 ? 1 : v <= 150 ? 2 : 3,
   },
 };
 
@@ -147,12 +147,10 @@ function computeFactorPoints(factorKey, rawValue) {
   return 0;
 }
 
-function scoreToLevel(score, maxScore) {
-  if (maxScore === 0) return 'Low';
-  const pct = score / maxScore;
-  if (pct >= 0.7) return 'Very High';
-  if (pct >= 0.45) return 'High';
-  if (pct >= 0.25) return 'Moderate';
+function scoreToLevel(score) {
+  if (score >= 12) return 'Very High';
+  if (score >= 8) return 'High';
+  if (score >= 4) return 'Moderate';
   return 'Low';
 }
 
@@ -205,7 +203,7 @@ const CARD_STYLES = `
     box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
     position: relative;
     overflow: hidden;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: #e0e0e0;
   }
 
@@ -250,7 +248,7 @@ const CARD_STYLES = `
   }
 
   .gauge-score {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Mono', 'Courier New', monospace;
     font-size: 42px;
     font-weight: 700;
     fill: #fff;
@@ -277,7 +275,7 @@ const CARD_STYLES = `
 
   /* ── Factors ── */
   .factors-header {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Mono', 'Courier New', monospace;
     font-size: 9px;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -346,7 +344,7 @@ const CARD_STYLES = `
   }
 
   .factor-value {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Mono', 'Courier New', monospace;
     font-size: 12px;
     font-weight: 700;
     color: var(--f-color);
@@ -387,7 +385,7 @@ const CARD_STYLES = `
   }
 
   .forecast-risk {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Mono', 'Courier New', monospace;
     font-size: 13px;
     font-weight: 700;
     color: var(--forecast-color);
@@ -400,7 +398,7 @@ const CARD_STYLES = `
   }
 
   .forecast-badge {
-    font-family: 'Space Mono', monospace;
+    font-family: 'Space Mono', 'Courier New', monospace;
     font-size: 18px;
     font-weight: 700;
     color: var(--forecast-color);
@@ -504,12 +502,12 @@ class MigraineRiskCard extends HTMLElement {
     if (!h) return '';
     const c = this._config;
     let s = '';
-    if (c.entity_risk_score) s += h.states[c.entity_risk_score]?.state || '';
-    if (c.entity_risk_level) s += h.states[c.entity_risk_level]?.state || '';
-    if (c.entity_forecast) s += h.states[c.entity_forecast]?.state || '';
+    if (c.entity_risk_score) s += (h.states[c.entity_risk_score]?.state || '') + '|';
+    if (c.entity_risk_level) s += (h.states[c.entity_risk_level]?.state || '') + '|';
+    if (c.entity_forecast) s += (h.states[c.entity_forecast]?.state || '') + '|';
     for (const k of FACTOR_KEYS) {
       const eid = c[FACTORS[k].configKey];
-      if (eid) s += h.states[eid]?.state || '';
+      if (eid) s += (h.states[eid]?.state || '') + '|';
     }
     return s;
   }
@@ -632,7 +630,7 @@ class MigraineRiskCard extends HTMLElement {
     if (c.entity_risk_level && h.states[c.entity_risk_level]) {
       level = h.states[c.entity_risk_level].state;
     } else {
-      level = scoreToLevel(totalScore, maxScore);
+      level = scoreToLevel(totalScore);
     }
 
     const colour = riskColour(level);
@@ -655,8 +653,10 @@ class MigraineRiskCard extends HTMLElement {
   _refreshFactors(factorData) {
     const grid = this._els.factorGrid;
 
-    if (grid.children.length !== factorData.length) {
+    const newKeys = factorData.map(f => f.key).join(',');
+    if (grid.dataset.keys !== newKeys) {
       grid.innerHTML = '';
+      grid.dataset.keys = newKeys;
       factorData.forEach(() => {
         const tile = document.createElement('div');
         tile.className = 'factor';
@@ -733,7 +733,16 @@ class MigraineRiskCard extends HTMLElement {
     card.style.setProperty('--forecast-color', fColour);
 
     const fIconEl = bar.querySelector('.forecast-icon');
-    const fIconName = WEATHER_ICONS[attrs.icon_descriptor] || 'mdi:weather-partly-cloudy';
+    const RISK_ICONS = {
+      'Low': 'mdi:weather-sunny',
+      'Moderate': 'mdi:weather-partly-cloudy',
+      'High': 'mdi:weather-cloudy',
+      'Very High': 'mdi:weather-lightning',
+    };
+    const fIconName = WEATHER_ICONS[attrs.icon_descriptor]
+      || WEATHER_ICONS[attrs.condition]
+      || RISK_ICONS[fLevel]
+      || 'mdi:weather-partly-cloudy';
     if (!fIconEl.querySelector('ha-icon')) {
       fIconEl.innerHTML = '';
       const hi = document.createElement('ha-icon');
@@ -891,7 +900,7 @@ class MigraineRiskCardEditor extends HTMLElement {
       field.appendChild(lbl);
 
       const picker = document.createElement('ha-entity-picker');
-      picker.allow_custom = true;
+      picker.allowCustomEntity = true;
       picker.value = this._config[key] || '';
       picker.label = label;
       picker.addEventListener('value-changed', (e) => {
